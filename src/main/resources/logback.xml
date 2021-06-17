@@ -21,7 +21,9 @@
 		<prudent>false</prudent>
 	</appender>
 
-	<logger name="com.javieu.crypto" level="INFO" />
+	<logger name="com.excel.crypto" level="INFO" />
+	<logger name="org.ta4j.core" level="INFO" />
+
 
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />

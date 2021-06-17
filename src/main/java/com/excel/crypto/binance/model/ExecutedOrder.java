@@ -1,4 +1,4 @@
-package com.javieu.crypto.binance.model;
+package com.excel.crypto.binance.model;
 
 public class ExecutedOrder {
 	

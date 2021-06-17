@@ -1,25 +1,27 @@
-package com.javieu.crypto.binance;
+package com.excel.crypto.binance;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import com.excel.crypto.binance.strategy.StrategyFactory;
 import org.apache.commons.lang3.StringUtils;
-import org.ta4j.core.Decimal;
+import org.ta4j.core.Bar;
+import org.ta4j.core.BarSeries;
+
 import org.ta4j.core.Strategy;
-import org.ta4j.core.Tick;
-import org.ta4j.core.TimeSeries;
 
 import com.binance.api.client.BinanceApiRestClient;
 import com.binance.api.client.BinanceApiWebSocketClient;
 import com.binance.api.client.domain.market.Candlestick;
 import com.binance.api.client.domain.market.CandlestickInterval;
-import com.javieu.crypto.binance.exceptions.GeneralException;
-import com.javieu.crypto.binance.trading.TradeTask;
-import com.javieu.crypto.binance.util.BinanceTa4jUtils;
-import com.javieu.crypto.binance.util.BinanceUtils;
-import com.javieu.crypto.binance.util.ConfigUtils;
+import com.excel.crypto.binance.exceptions.GeneralException;
+import com.excel.crypto.binance.trading.TradeTask;
+import com.excel.crypto.binance.util.BinanceTa4jUtils;
+import com.excel.crypto.binance.util.BinanceUtils;
+import com.excel.crypto.binance.util.ConfigUtils;
+import org.ta4j.core.num.Num;
 
 public class BinanceBot {
 
@@ -28,12 +30,14 @@ public class BinanceBot {
 	private static Boolean DO_TRADES = true;
 	private static Integer MAX_SIMULTANEOUS_TRADES = 0;
 	private static Double TRADE_SIZE_BTC;
+	// 止损百分比
 	private static Double STOPLOSS_PERCENTAGE = 5.00;
 	private static Boolean DO_TRAILING_STOP = false;
 	private static String TRADING_STRATEGY;
 
 	// We will store time series for every symbol
-	private static Map<String, TimeSeries> timeSeriesCache = new HashMap<String, TimeSeries>();
+	// 我们将为每个标的存储时间序列
+	private static Map<String, BarSeries> timeSeriesCache = new HashMap<String, BarSeries>();
 
 	private static Map<String, TradeTask> openTrades = new HashMap<String, TradeTask>();
 	private static List<String> ordersToBeClosed = new LinkedList<String>();
@@ -47,6 +51,7 @@ public class BinanceBot {
 	private static CandlestickInterval interval = null;
 
 	public static void main(String[] args) {
+		System.setProperty("https.protocols", "TLSv1.1,TLSv1.2");
 		Log.info(BinanceBot.class, "Initializing Binance bot");
 		String configFilePath = System.getProperty("CONFIG_FILE_PATH");
 		Log.info(BinanceBot.class,
@@ -80,9 +85,9 @@ public class BinanceBot {
 			}
 		}
 		if (interval == null) {
-			interval = CandlestickInterval.FOUR_HORLY;
+			interval = CandlestickInterval.FOUR_HOURLY;
 			Log.info(BinanceBot.class, "Using default candlestick interval: "
-					+ CandlestickInterval.FOUR_HORLY.getIntervalId());
+					+ CandlestickInterval.FOUR_HOURLY.getIntervalId());
 		}
 
 		// Trading settings
@@ -183,26 +188,28 @@ public class BinanceBot {
 		Long t0 = System.currentTimeMillis();
 		try {
 			List<Candlestick> latestCandlesticks = BinanceUtils.getLatestCandlestickBars(symbol, interval);
-			TimeSeries series = timeSeriesCache.get(symbol);
-			if (BinanceTa4jUtils.isSameTick(latestCandlesticks.get(1), series.getLastTick())) {
+			BarSeries series = timeSeriesCache.get(symbol);
+			if (BinanceTa4jUtils.isSameTick(latestCandlesticks.get(1), series.getLastBar())) {
 				// We are still in the same tick - just update the last tick with the fresh data
 				updateLastTick(symbol, latestCandlesticks.get(1));
 			} else {
 				// We have just got a new tick - update the previous one and include the new tick
 				updateLastTick(symbol, latestCandlesticks.get(0));
-				series.addTick(BinanceTa4jUtils.convertToTa4jTick(latestCandlesticks.get(1)));
+				series.addBar(BinanceTa4jUtils.convertToTa4jTick(latestCandlesticks.get(1)));
 			}
 			// Now check the TA strategy with the refreshed time series
+			// 现在用刷新的时间序列检查 TA 策略
 			int endIndex = series.getEndIndex();
-			Strategy strategy = BinanceTa4jUtils.buildStrategy(series, TRADING_STRATEGY);
+			Strategy strategy = StrategyFactory.buildStrategy(series, TRADING_STRATEGY);
 			if (strategy.shouldEnter(endIndex)) {
 				// If we have an open trade for the symbol, we do not create a new one
+				// 如果我们有交易品种的未平仓交易，我们不会创建新交易
 				if (DO_TRADES && openTrades.get(symbol) == null) {					
-					Decimal currentPrice = series.getLastTick().getClosePrice();
-					Log.info(BinanceBot.class, "Bullish signal for symbol: " + symbol + ", price: " + currentPrice);
+					Num currentPrice = series.getLastBar().getClosePrice();
+					Log.info(BinanceBot.class, "Bullish(看涨) signal for symbol: " + symbol + ", price: " + currentPrice);
 					if (openTrades.keySet().size() < MAX_SIMULTANEOUS_TRADES) {
 						// We create a new thread to trade with the symbol
-						TradeTask tradeTask = new TradeTask(client, liveClient, symbol, currentPrice.toDouble(),
+						TradeTask tradeTask = new TradeTask(client, liveClient, symbol, currentPrice.doubleValue(),
 								TRADE_SIZE_BTC, STOPLOSS_PERCENTAGE, DO_TRAILING_STOP);
 						new Thread(tradeTask).start();
 						openTrades.put(symbol, tradeTask);
@@ -213,7 +220,7 @@ public class BinanceBot {
 				}
 			} else if (strategy.shouldExit(endIndex) && openTrades.get(symbol) != null && !DO_TRAILING_STOP) {
 				// If we use trailing stop, the order will be closed when the moving stoploss is hit
-				Log.info(BinanceBot.class, "Bearish signal for symbol: " + symbol + ", price: " + series.getLastTick().getClosePrice()
+				Log.info(BinanceBot.class, "Bearish signal for symbol: " + symbol + ", price: " + series.getLastBar().getClosePrice()
 						+ "; marking it as closable.");
 				// This object is scanned by the symbol trading thread
 				ordersToBeClosed.add(symbol);
@@ -226,8 +233,8 @@ public class BinanceBot {
 	}
 	
 	private static void updateLastTick(String symbol, Candlestick candlestick) {
-		TimeSeries series = timeSeriesCache.get(symbol);
-		List<Tick> seriesTick = series.getTickData();
+		BarSeries series = timeSeriesCache.get(symbol);
+		List<Bar> seriesTick = series.getBarData();
 		seriesTick.remove(series.getEndIndex());
 		seriesTick.add(BinanceTa4jUtils.convertToTa4jTick(candlestick));
 	}
@@ -237,7 +244,7 @@ public class BinanceBot {
 			Log.info(BinanceBot.class, "Generating time series for " + symbol);
 			try {
 				List<Candlestick> candlesticks = BinanceUtils.getCandlestickBars(symbol, interval);
-				TimeSeries series = BinanceTa4jUtils.convertToTimeSeries(candlesticks, symbol, interval.getIntervalId());
+				BarSeries series = BinanceTa4jUtils.convertToTimeSeries(candlesticks, symbol, interval.getIntervalId());
 				timeSeriesCache.put(symbol, series);
 			} catch (Exception e) {
 				Log.severe(BinanceBot.class, "Unable to generate time series / strategy for " + symbol, e);
@@ -247,6 +254,7 @@ public class BinanceBot {
 
 	/**
 	 * The open thread invokes this method to mark an order as closed
+	 * 打开的线程调用此方法将订单标记为已关闭
 	 * @param symbol
 	 * @param profit
 	 * @param errorMessage
@@ -265,6 +273,7 @@ public class BinanceBot {
 
 	/**
 	 * The open thread invokes this method to check if an order should be closed
+	 * 打开的线程调用此方法来检查是否应关闭订单
 	 * @param symbol
 	 * @return if it should be closed or not
 	 */

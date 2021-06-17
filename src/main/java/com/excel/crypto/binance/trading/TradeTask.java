@@ -1,4 +1,4 @@
-package com.javieu.crypto.binance.trading;
+package com.excel.crypto.binance.trading;
 
 import static com.binance.api.client.domain.account.NewOrder.marketBuy;
 import static com.binance.api.client.domain.account.NewOrder.marketSell;
@@ -9,10 +9,10 @@ import com.binance.api.client.BinanceApiRestClient;
 import com.binance.api.client.BinanceApiWebSocketClient;
 import com.binance.api.client.domain.account.NewOrder;
 import com.binance.api.client.domain.market.CandlestickInterval;
-import com.javieu.crypto.binance.Log;
-import com.javieu.crypto.binance.BinanceBot;
-import com.javieu.crypto.binance.exceptions.GeneralException;
-import com.javieu.crypto.binance.model.ExecutedOrder;
+import com.excel.crypto.binance.Log;
+import com.excel.crypto.binance.BinanceBot;
+import com.excel.crypto.binance.exceptions.GeneralException;
+import com.excel.crypto.binance.model.ExecutedOrder;
 
 public class TradeTask implements Runnable {
 
@@ -43,8 +43,10 @@ public class TradeTask implements Runnable {
 		this.liveClient = liveClient;
 	}
 
+	@Override
 	public void run() {
 		// 1.- BUY, get order data - price and create ExecutedOrder with stoploss
+		// 购买，获取订单数据 - 价格并创建带有止损的 ExecutedOrder
 		try {
 			buy();
 		} catch (GeneralException e) {
@@ -54,6 +56,7 @@ public class TradeTask implements Runnable {
 			BinanceBot.closeOrder(symbol, null, e.getMessage());
 		}
 		// 2.- Suscribe to price ticks for the symbol, evaluate current price and update stoploss (if trailing stop)
+		// 订阅价格变动，评估当前价格并更新止损（如果追踪止损）
 		monitorPrice();
 	}
 
@@ -63,6 +66,7 @@ public class TradeTask implements Runnable {
 		NewOrder newOrder = marketBuy(symbol, quantity);
 		try {
 			// By now we will not be creating real orders
+			// 现在我们不会创建真正的订单
 			client.newOrderTest(newOrder);
 			Log.info(getClass(), "Created BUY order: " + newOrder);
 		} catch (Exception e) {
@@ -74,6 +78,7 @@ public class TradeTask implements Runnable {
 		order.setQuantity(quantity);
 		order.setPrice(alertPrice);
 		// current stop loss - used for trailing stop
+		// 当前止损 - 用于追踪止损
 		order.setCurrentStopLoss((100.0 - stopLossPercentage) * alertPrice / 100.0);
 		order.setInitialStopLoss(order.getCurrentStopLoss());
 		order.setCreationTime(System.currentTimeMillis());
@@ -90,7 +95,12 @@ public class TradeTask implements Runnable {
 			Log.severe(getClass(), "Unable to sell!", e);
 		}
 	}
-
+	
+	/**
+	 * Binance API 中有一种方法可以获取交易品种信息
+	 * @param price
+	 * @return
+	 */
 	private String getAmount(Double price) {
 		// This method should be refactored... there is a method in Binance API to get symbol info
 		Double rawAmount = btcAmount / price;
@@ -129,8 +139,9 @@ public class TradeTask implements Runnable {
 					+ ". Current price: " + showPrice(price) + ", profit: " + order.getProfit());
 			BinanceBot.closeOrder(symbol, order.getProfit(), null);
 		}
-		if (doTrailingStop && price > order.getPrice()) { 
-			// Trailing stop, price is higher, update stoploss
+		if (doTrailingStop && price > order.getPrice()) {
+			
+			// Trailing stop, price is higher, update stoploss  追踪止损，价格更高，更新止损
 			Double newStopLoss = (100.0 - stopLossPercentage) * price / 100.0;
 			if (order.getCurrentStopLoss() < newStopLoss) {
 				order.setCurrentStopLoss(newStopLoss);

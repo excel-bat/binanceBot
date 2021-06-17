@@ -1,4 +1,4 @@
-package com.javieu.crypto.binance;
+package com.excel.crypto.binance;
 
 import java.util.Map;
 import java.util.TreeMap;

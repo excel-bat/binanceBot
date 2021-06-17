@@ -1,4 +1,4 @@
-package com.javieu.crypto.binance.util;
+package com.excel.crypto.binance.util;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -8,7 +8,7 @@ import java.util.Properties;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import com.javieu.crypto.binance.Log;
+import com.excel.crypto.binance.Log;
 
 public class ConfigUtils {
 	
@@ -22,6 +22,7 @@ public class ConfigUtils {
 	public static final String CONFIG_TRADING_MAX_SIMULTANEOUS_TRADES = "trading.maxSimultaneousTrades";
 	public static final String CONFIG_TRADING_DO_TRAILING_STOP = "trading.doTrailingStop";
 	public static final String CONFIG_TRADING_STRATEGY = "trading.strategy";
+	public static final String CONFIG_BINANCE_SYMBOL = "binance.symbol";
 
 	private static String systemConfigFilePath = "";
 	

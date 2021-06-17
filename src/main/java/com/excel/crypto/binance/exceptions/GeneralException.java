@@ -1,4 +1,4 @@
-package com.javieu.crypto.binance.exceptions;
+package com.excel.crypto.binance.exceptions;
 
 public class GeneralException extends Exception {
 

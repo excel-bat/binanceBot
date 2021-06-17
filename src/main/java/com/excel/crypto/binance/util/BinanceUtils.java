@@ -1,7 +1,10 @@
-package com.javieu.crypto.binance.util;
+package com.excel.crypto.binance.util;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Spliterators;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -11,7 +14,7 @@ import com.binance.api.client.BinanceApiWebSocketClient;
 import com.binance.api.client.domain.market.Candlestick;
 import com.binance.api.client.domain.market.CandlestickInterval;
 import com.binance.api.client.domain.market.TickerPrice;
-import com.javieu.crypto.binance.exceptions.GeneralException;
+import com.excel.crypto.binance.exceptions.GeneralException;
 
 public class BinanceUtils {
 
@@ -20,14 +23,27 @@ public class BinanceUtils {
 
 	private static BinanceApiRestClient client = null;
 	private static BinanceApiWebSocketClient liveClient = null;
+	
+
 
 	public static List<String> getBitcoinSymbols() throws GeneralException {
 		List<String> symbols = new LinkedList<String>();
 		BinanceApiRestClient client = getRestClient();
 		List<TickerPrice> prices = client.getAllPrices();
+		String[] targetSymbol = ConfigUtils
+				.readPropertyValue(ConfigUtils.CONFIG_BINANCE_SYMBOL).trim().split("\\s*,\\s*");;
+		
 		for (TickerPrice tickerPrice : prices) {
-			if (StringUtils.endsWith(tickerPrice.getSymbol(), "BTC")) {
-				symbols.add(tickerPrice.getSymbol());
+			if (StringUtils.endsWith(tickerPrice.getSymbol(), "USDT")) {
+				if(targetSymbol.length > 0 ){
+					if(Arrays.asList(targetSymbol)
+							.stream()
+							.filter(s -> tickerPrice.getSymbol().contains(s)).collect(Collectors.toList()).size() >0){
+						symbols.add(tickerPrice.getSymbol());
+					}
+				}else{
+					symbols.add(tickerPrice.getSymbol());
+				}
 			}
 		}
 		return symbols;

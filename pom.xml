@@ -21,8 +21,14 @@
 		<dependency>
 			<groupId>org.ta4j</groupId>
 			<artifactId>ta4j-core</artifactId>
-			<version>0.10</version>
+			<version>0.15-SNAPSHOT</version>
 		</dependency>
+		<dependency>
+			<groupId>org.ta4j</groupId>
+			<artifactId>ta4j-examples</artifactId>
+			<version>0.15-SNAPSHOT</version>
+		</dependency>
+
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
@@ -47,7 +53,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>com.javieu.crypto.binance.BinanceBot</mainClass>
+							<mainClass>com.excel.crypto.binance.BinanceBot</mainClass>
 						</manifest>
 					</archive>
 					<descriptorRefs>

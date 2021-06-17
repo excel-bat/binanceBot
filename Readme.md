@@ -19,3 +19,9 @@ java -DLOGS_PATH=<PATH TO YOUR LOGS FOLDER> -DCONFIG_FILE_PATH=<PATH TO YOUR con
 
 The TA strategy is included in BinanceTa4jUtils class. I have just included one first strategy based on moving average (crosses of MACD, etc.). New TA4J strategies can be included there - you will need to modify public static Strategy buildStrategy(TimeSeries series, String strategyCode) method.
 
+
+### 策略
+
+布林带到下限的时候，第一个买入信号，再找第二个买入信号，就买入，止损点设置在，止盈点设置
+
+退出设置在
