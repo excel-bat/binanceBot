@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Spliterators;
 import java.util.stream.Collectors;
 
+import com.binance.api.client.constant.BinanceKeyUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import com.binance.api.client.BinanceApiClientFactory;
@@ -99,8 +100,9 @@ public class BinanceUtils {
 		if(StringUtils.isEmpty(binanceApiKey) || StringUtils.isEmpty(binanceApiSecret)) {
 			throw new GeneralException("Binance API params cannot be empty; please check the config properties file");
 		}
-		API_KEY = binanceApiKey;
-		API_SECRET = binanceApiSecret;
+		
+		API_KEY = BinanceKeyUtil.fetchKey();
+		API_SECRET = BinanceKeyUtil.fetchSecKey();
 	}
 
 }
