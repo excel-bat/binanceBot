@@ -11,5 +11,4 @@ LOGS_PATH_IS_UNDEFINED
 
 .idea/
 logs/
-src/test/
-!/src/main/resources/config.properties
+resources/config.properties
